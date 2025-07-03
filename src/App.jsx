@@ -11,23 +11,31 @@ import ChatRoom from "./Components/ChatRoom";
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // ✅ loading state to prevent flicker
 
-  // ✅ Auth state + redirect login result
   useEffect(() => {
+    // ✅ Listen for auth state changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoading(false); // stop loading after auth state resolves
     });
 
-    getRedirectResult(auth).then((result) => {
-      if (result && result.user) {
-        setUser(result.user);
-      }
-    });
+    // ✅ Handle result from signInWithRedirect
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          setUser(result.user);
+        }
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Redirect login error:", error);
+        setLoading(false);
+      });
 
     return () => unsubscribe();
   }, []);
 
-  // ✅ Login: popup on desktop, redirect on mobile
   const login = async () => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try {
@@ -74,7 +82,9 @@ export default function App() {
           💬 React Firebase Chat
         </h2>
 
-        {!user ? (
+        {loading ? (
+          <p style={{ textAlign: "center" }}>Loading...</p>
+        ) : !user ? (
           <button
             onClick={login}
             style={{
