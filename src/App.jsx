@@ -14,26 +14,25 @@ export default function App() {
   const [loading, setLoading] = useState(true); // ✅ loading state to prevent flicker
 
   useEffect(() => {
-    // ✅ Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false); // stop loading after auth state resolves
-    });
-
-    // ✅ Handle result from signInWithRedirect
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user) {
+    const checkRedirectAndAuth = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
           setUser(result.user);
+        } else {
+          // Even if result is null, Firebase may still auto-login
+          onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setLoading(false);
+          });
         }
+      } catch (error) {
+        console.error("Redirect error:", error);
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Redirect login error:", error);
-        setLoading(false);
-      });
-
-    return () => unsubscribe();
+      }
+    };
+  
+    checkRedirectAndAuth();
   }, []);
 
   const login = async () => {
