@@ -4,49 +4,27 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
-  signInWithRedirect,
-  getRedirectResult,
 } from "firebase/auth";
 import ChatRoom from "./Components/ChatRoom";
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // ✅ loading state to prevent flicker
+  const [loading, setLoading] = useState(true);
 
+  // ✅ Handle auth state persistence
   useEffect(() => {
-    const checkRedirectAndAuth = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          setUser(result.user);
-        } else {
-          // Even if result is null, Firebase may still auto-login
-          onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            setLoading(false);
-          });
-        }
-      } catch (error) {
-        console.error("Redirect error:", error);
-        setLoading(false);
-      }
-    };
-  
-    checkRedirectAndAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const login = async () => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try {
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        await signInWithPopup(auth, provider);
-      }
+      await signInWithPopup(auth, provider);
     } catch (error) {
-      if (error.code !== "auth/popup-closed-by-user") {
-        alert("Login failed: " + error.message);
-      }
+      alert("Login error: " + error.message);
     }
   };
 
@@ -111,7 +89,9 @@ export default function App() {
                 gap: "8px",
               }}
             >
-              <p style={{ margin: 0 }}>👋 Hello, <strong>{user.displayName}</strong></p>
+              <p style={{ margin: 0 }}>
+                👋 Hello, <strong>{user.displayName}</strong>
+              </p>
               <button
                 onClick={logout}
                 style={{
@@ -120,6 +100,7 @@ export default function App() {
                   color: "#fff",
                   border: "none",
                   borderRadius: "5px",
+                  cursor: "pointer",
                 }}
               >
                 Logout
